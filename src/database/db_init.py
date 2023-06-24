@@ -8,6 +8,7 @@ async def create_db():
         await cursor.execute("""
             CREATE TABLE IF NOT EXISTS topics (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
                 topic TEXT NOT NULL,
                 votes INTEGER NOT NULL DEFAULT 0
             );
@@ -21,7 +22,9 @@ async def create_db():
             CREATE TABLE IF NOT EXISTS users (
                 telegram_id INTEGER PRIMARY KEY,
                 username TEXT NOT NULL,
-                password TEXT NOT NULL
+                password TEXT NOT NULL,
+                last_name TEXT NOT NULL,
+                apartment_number INTEGER NOT NULL
             );
         """)
         await db.commit()

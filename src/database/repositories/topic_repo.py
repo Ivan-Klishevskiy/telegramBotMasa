@@ -11,10 +11,10 @@ class TopicRep:
             return await cursor.fetchall()
 
     @staticmethod
-    async def create_topic(message):
+    async def create_topic(username, message):
         async with connect('data/topics.db') as db:
             cursor = await db.cursor()
-            await cursor.execute("INSERT INTO topics (topic, votes) VALUES (?, 0)", (message,))
+            await cursor.execute("INSERT INTO topics (username, topic, votes) VALUES (?, ?, 0)", (username, message))
             await db.commit()
 
     @staticmethod
@@ -39,4 +39,11 @@ class TopicRep:
             cursor = await db.cursor()
             await cursor.execute("INSERT INTO votes (telegram_id, topic_id) VALUES (?, ?)",
                                  (telegram_id, topic_id))
+            await db.commit()
+
+    @staticmethod
+    async def delete_topic(topic_id):
+        async with connect('data/topics.db') as db:
+            cursor = await db.cursor()
+            await cursor.execute("DELETE FROM topics WHERE id = ?", (topic_id,))
             await db.commit()

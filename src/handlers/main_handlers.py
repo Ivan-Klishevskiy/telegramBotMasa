@@ -1,6 +1,7 @@
 from aiogram import types
 from src.database.repositories.user_repo import UserRep
 from src.handlers.complaint_handlers import add_urgen_step1, add_not_urgen_step1, show_requests
+from src.handlers.madrih_handlers import show_not_urgent_requests, show_urgent_requests
 from src.handlers.topic_handlers import show_topics, add_topic_step1
 from main import dp
 
@@ -29,29 +30,40 @@ async def choice_main_option(message: types.Message):
 
 
 async def show_request_options(message: types.Message):
-    if not await UserRep.get_user_by_id(message.from_user.id):
+    user = await UserRep.get_user_by_id(message.from_user.id)
+    if not user:
         await message.answer("Пожалуйста, авторизуйтесь.")
         return
 
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    buttons = ["Срочно", "Не срочно", "Мои обращения", "Главное меню"]
+    buttons = []
+    if user[0] == 'madrih':
+        buttons = ["Cрочные", "Не срочные", "Главное меню"]
+    else:
+        buttons = ["Срочно", "Не срочно", "Мои обращения", "Главное меню"]
     keyboard.add(*buttons)
 
     await message.answer("Выберите тип обращения:", reply_markup=keyboard)
 
 
-@dp.message_handler(lambda message: message.text in ["Срочно", "Не срочно", "Мои обращения"])
+@dp.message_handler(lambda message: message.text in ["Cрочные", "Не срочные", "Срочно", "Не срочно", "Мои обращения"])
 async def choice_topic_options(message: types.Message):
-    if not await UserRep.get_user_by_id(message.from_user.id):
+    user = await UserRep.get_user_by_id(message.from_user.id)
+    if not user:
         await message.answer("Пожалуйста, авторизуйтесь.")
         return
-
-    if message.text == "Срочно":
-        await add_urgen_step1(message)
-    elif message.text == "Не срочно":
-        await add_not_urgen_step1(message)
-    elif message.text == "Мои обращения":
-        await show_requests(message)
+    if user[0] == 'madrih':
+        if message.text == "Cрочные":
+            await show_urgent_requests(message)
+        elif message.text == "Не срочные":
+            await show_not_urgent_requests(message)
+    else:
+        if message.text == "Срочно":
+            await add_urgen_step1(message)
+        elif message.text == "Не срочно":
+            await add_not_urgen_step1(message)
+        elif message.text == "Мои обращения":
+            await show_requests(message)
 
 
 async def show_topic_options(message: types.Message):

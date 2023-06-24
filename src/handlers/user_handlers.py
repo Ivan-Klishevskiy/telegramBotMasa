@@ -21,6 +21,8 @@ class LoginState(StatesGroup):
 class RegisterState(StatesGroup):
     waiting_for_username = State()
     waiting_for_password = State()
+    waiting_for_last_name = State()
+    waiting_for_apartment_number = State()
 
 
 @dp.message_handler(Command('start'))
@@ -57,28 +59,34 @@ async def login_step1(message: types.Message):
 
 @dp.message_handler(state=LoginState.waiting_for_username)
 async def login_step2(message: types.Message, state: FSMContext):
-    await state.update_data(username=message.text)
-    await LoginState.next()
-    await message.answer("Введите пароль:")
+    if message.text in DISABLE_WORDS:
+        await message.answer("Отказано, введено недоступное слово.\nВведите логин:")
+    else:
+        await state.update_data(username=message.text)
+        await LoginState.next()
+        await message.answer("Введите пароль:")
 
 
 @dp.message_handler(state=LoginState.waiting_for_password)
 async def login_step3(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    username = data.get('username')
-    password = message.text
-
-    temp_user = await UserRep.get_user_by_login_pass(username, password)
-
-    if temp_user:
-        await UserRep.update_user(message.from_user.id, username, password)
-        await message.answer("Вы успешно вошли в систему!")
-        await show_main_options(message)
-        await state.finish()
+    if message.text in DISABLE_WORDS:
+        await message.answer("Отказано, введено недоступное слово.\nВведите пароль:")
     else:
-        await message.answer("Логин или пароль введены неверно.")
-        await state.finish()
-        await start_command(message)
+        data = await state.get_data()
+        username = data.get('username')
+        password = message.text
+
+        temp_user = await UserRep.get_user_by_login_pass(username, password)
+
+        if temp_user:
+            await UserRep.update_user(message.from_user.id, username, password)
+            await message.answer("Вы успешно вошли в систему!")
+            await show_main_options(message)
+            await state.finish()
+        else:
+            await message.answer("Логин или пароль введены неверно.")
+            await state.finish()
+            await start_command(message)
 
 
 async def register_step1(message: types.Message):
@@ -88,29 +96,66 @@ async def register_step1(message: types.Message):
 
 @dp.message_handler(state=RegisterState.waiting_for_username)
 async def register_step2(message: types.Message, state: FSMContext):
-    await state.update_data(username=message.text)
-    await RegisterState.next()
-    await message.answer("Введите пароль:")
+    if message.text in DISABLE_WORDS:
+        await message.answer("Отказано, введено недоступное слово.\nВведите логин:")
+    else:
+        await state.update_data(username=message.text)
+        await RegisterState.next()
+        await message.answer("Введите пароль:")
 
 
 @dp.message_handler(state=RegisterState.waiting_for_password)
 async def register_step3(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    username = data.get('username')
-    password = message.text
-
-    if username in DISABLE_WORDS:
-        await message.answer("Использовано недоступное слово.")
-        await state.finish()
-        await start_command(message)
-
+    if message.text in DISABLE_WORDS:
+        await message.answer("Отказано, введено недоступное слово.\nВведите пароль:")
     else:
-        if await UserRep.get_user_by_username(username):
-            await message.answer("Такой пользователь уже существует.")
+        data = await state.get_data()
+        username = data.get('username')
+        password = message.text
+
+        if username in DISABLE_WORDS:
+            await message.answer("Использовано недоступное слово.")
             await state.finish()
             await start_command(message)
         else:
-            await UserRep.registr_user(message.from_user.id, username, password)
-            await message.answer("Вы успешно зарегистрировались!")
+            await state.update_data(password=password)
+            await RegisterState.next()
+            await message.answer("Введите фамилию:")
+
+
+@dp.message_handler(state=RegisterState.waiting_for_last_name)
+async def register_step4(message: types.Message, state: FSMContext):
+    if message.text in DISABLE_WORDS:
+        await message.answer("Отказано, введено недоступное слово.\nВведите фамилию:")
+    else:
+        await state.update_data(last_name=message.text)
+        await RegisterState.next()
+        await message.answer("Введите номер квартиры:")
+
+
+@dp.message_handler(state=RegisterState.waiting_for_apartment_number)
+async def register_step5(message: types.Message, state: FSMContext):
+    if not message.text.isdigit():
+        await message.answer("Отказано, введите только цифры в номере квартиры:")
+    else:
+        data = await state.get_data()
+        username = data.get('username')
+        password = data.get('password')
+        last_name = data.get('last_name')
+        apartment_number = message.text
+        if username in DISABLE_WORDS or password in DISABLE_WORDS:
+            await message.answer("Использовано недоступное слово.")
             await state.finish()
-            await show_main_options(message)
+            await start_command(message)
+        else:
+            if await UserRep.get_user_by_username(username):
+                await message.answer("Такой пользователь уже существует.")
+                await state.finish()
+                await start_command(message)
+            else:
+                await UserRep.registr_user(
+                    message.from_user.id, username, password, last_name, apartment_number
+                )
+                await message.answer("Вы успешно зарегистрировались!")
+                await state.finish()
+                await show_main_options(message)

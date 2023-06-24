@@ -3,9 +3,8 @@ from aiosqlite import connect
 
 class UserRep:
 
-
     @staticmethod
-    async def get_user_by_username(username:str):
+    async def get_user_by_username(username: str):
         async with connect('data/users.db') as db:
             cursor = await db.cursor()
             await cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
@@ -37,16 +36,40 @@ class UserRep:
             await db.commit()
 
     @staticmethod
-    async def registr_user(telegram_id, username, password) -> bool:
+    async def registr_user(telegram_id, username, password, last_name, apartment_number) -> bool:
         async with connect('data/users.db') as db:
             cursor = await db.cursor()
             await cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
             user = await cursor.fetchone()
 
             if user is None:
-                await cursor.execute("INSERT INTO users (telegram_id, username, password) VALUES (?, ?, ?)",
-                                     (telegram_id, username, password))
+                await cursor.execute("INSERT INTO users (telegram_id, username, password, last_name, apartment_number) "
+                                     "VALUES (?, ?, ?, ?, ?)",
+                                     (telegram_id, username, password, last_name, apartment_number))
                 await db.commit()
                 return True
             else:
                 return False
+
+    @staticmethod
+    async def logout_user(telegram_id: int):
+        async with connect('data/users.db') as db:
+            cursor = await db.cursor()
+            await cursor.execute("UPDATE users SET telegram_id = NULL WHERE telegram_id = ?", (telegram_id,))
+            await db.commit()
+
+    @staticmethod
+    async def get_user_info_by_id(telegram_id: int):
+        async with connect('data/users.db') as db:
+            cursor = await db.cursor()
+            await cursor.execute("SELECT last_name, apartment_number FROM users WHERE telegram_id = ?", (telegram_id,))
+            user_info = await cursor.fetchone()
+            return user_info
+
+    @staticmethod
+    async def get_user_info_by_username(username: str):
+        async with connect('data/users.db') as db:
+            cursor = await db.cursor()
+            await cursor.execute("SELECT last_name, apartment_number FROM users WHERE username = ?", (username,))
+            user_info = await cursor.fetchone()
+            return user_info

@@ -20,13 +20,31 @@ async def add_not_urgen_step1(message: types.Message):
         return
 
     await ComplaintState.waiting_for_user_text.set()
-    await message.answer("Введите текст обращения:")
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    buttons = ["Отмена"]
+    keyboard.add(*buttons)
+    await message.answer("Введите текст обращения:", reply_markup=keyboard)
 
 
 @dp.message_handler(state=ComplaintState.waiting_for_user_text)
 async def add_not_urgent_step2(message: types.Message, state: FSMContext):
-    if not await UserRep.get_user_by_id(message.from_user.id):
+    user = await UserRep.get_user_by_id(message.from_user.id)
+    if not user:
         await message.answer("Пожалуйста, авторизуйтесь.")
+        return
+
+    if message.text == "Отмена":
+        await message.answer("обращение отменено")
+        await state.finish()
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        if user[0] == 'madrih':
+            buttons = ["Cрочные", "Не срочные", "Главное меню"]
+        else:
+            buttons = ["Срочно", "Не срочно", "Мои обращения", "Главное меню"]
+        keyboard.add(*buttons)
+
+        await message.answer("Выберите тип обращения:", reply_markup=keyboard)
+
         return
 
     if message.text in DISABLE_WORDS:
@@ -48,13 +66,31 @@ async def add_urgen_step1(message: types.Message):
         return
 
     await ComplaintState.waiting_for_user_text.set()
-    await message.answer("Введите текст обращения:")
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    buttons = ["Отмена"]
+    keyboard.add(*buttons)
+    await message.answer("Введите текст обращения:", reply_markup=keyboard)
 
 
 @dp.message_handler(state=ComplaintState.waiting_for_user_text)
 async def add_urgent_step2(message: types.Message, state: FSMContext):
-    if not await UserRep.get_user_by_id(message.from_user.id):
+    user = await UserRep.get_user_by_id(message.from_user.id)
+    if not user:
         await message.answer("Пожалуйста, авторизуйтесь.")
+        return
+
+    if message.text == "Отмена":
+        await message.answer("обращение отменено")
+        await state.finish()
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        if user[0] == 'madrih':
+            buttons = ["Cрочные", "Не срочные", "Главное меню"]
+        else:
+            buttons = ["Срочно", "Не срочно", "Мои обращения", "Главное меню"]
+        keyboard.add(*buttons)
+
+        await message.answer("Выберите тип обращения:", reply_markup=keyboard)
+
         return
 
     if message.text in DISABLE_WORDS:

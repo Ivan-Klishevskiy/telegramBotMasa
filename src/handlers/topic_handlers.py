@@ -13,7 +13,8 @@ class TopicState(StatesGroup):
 
 
 async def show_topics(message: types.Message):
-    if not await UserRep.get_user_by_id(message.from_user.id):
+    user = await UserRep.get_user_by_id(message.from_user.id)
+    if not user:
         await message.answer("Пожалуйста, авторизуйтесь.")
         return
 
@@ -22,9 +23,15 @@ async def show_topics(message: types.Message):
     if topics:
         for topic in topics:
             keyboard = types.InlineKeyboardMarkup()
-            button = types.InlineKeyboardButton(text="Голосовать", callback_data=f"vote_{topic[0]}")
-            keyboard.add(button)
-            await message.answer(f"{topic[1]} (голосов: {topic[2]})", reply_markup=keyboard)
+
+            if user[0] == 'madrih':
+                button = types.InlineKeyboardButton(text="Удалить", callback_data=f"delete_{topic[0]}")
+                keyboard.add(button)
+            else:
+                button = types.InlineKeyboardButton(text="Голосовать", callback_data=f"vote_{topic[0]}")
+                keyboard.add(button)
+            last_name = await UserRep.get_user_info_by_username(topic[1])
+            await message.answer(f"От {last_name[0]}\n{topic[2]} (голосов: {topic[3]})", reply_markup=keyboard)
 
         await message.answer('Проголосуйте за тему которая вам интересна'
                              ' или предложите новую нажав на кнопку "Добавить новую тему"')
@@ -53,18 +60,42 @@ async def add_topic_step1(message: types.Message):
         return
 
     await TopicState.waiting_for_topic.set()
-    await message.answer("Введите тему:")
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    buttons = ["Отмена"]
+    keyboard.add(*buttons)
+    await message.answer("Введите тему:", reply_markup=keyboard)
 
 
 @dp.message_handler(state=TopicState.waiting_for_topic)
 async def add_topic_step2(message: types.Message, state: FSMContext):
-    if not await UserRep.get_user_by_id(message.from_user.id):
+    user = await UserRep.get_user_by_id(message.from_user.id)
+    if not user:
         await message.answer("Пожалуйста, авторизуйтесь.")
         return
-
+    if message.text == "Отмена":
+        await message.answer("Добавление темы отменено")
+        await state.finish()
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        buttons = ["Показать все темы", "Добавить новую тему", "Главное меню"]
+        keyboard.add(*buttons)
+        await message.answer("Выберите действие:", reply_markup=keyboard)
+        return
     if message.text in DISABLE_WORDS:
         await message.answer("Отказано, введено недоступное слово.\nВведите тему:")
     else:
-        await TopicRep.create_topic(message.text)
+        await TopicRep.create_topic(user[0], message.text)
         await message.answer("Тема успешно добавлена.")
         await state.finish()
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        buttons = ["Показать все темы", "Добавить новую тему", "Главное меню"]
+        keyboard.add(*buttons)
+        await message.answer("Выберите действие:", reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith('delete_'))
+async def process_delete_callback(callback_query: types.CallbackQuery):
+    topic_id = int(callback_query.data.split('_')[1])
+
+    await TopicRep.delete_topic(topic_id)
+
+    await bot.answer_callback_query(callback_query.id, "Тема успешно удалена.")
