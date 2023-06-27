@@ -3,7 +3,7 @@ from src.database.repositories.user_repo import UserRep
 from src.handlers.complaint_handlers import add_urgen_step1, add_not_urgen_step1, show_requests
 from src.handlers.madrih_handlers import show_not_urgent_requests, show_urgent_requests
 from src.handlers.topic_handlers import show_topics, add_topic_step1
-from main import dp
+from main import dp, bot
 
 
 async def show_main_options(message: types.Message):
@@ -12,13 +12,16 @@ async def show_main_options(message: types.Message):
         return
 
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    buttons = ["Голосование", "Обращение"]
+    buttons = ["Голосование", "Обращение", "Выход"]
     keyboard.add(*buttons)
     await message.answer("Выберите действие:", reply_markup=keyboard)
 
 
-@dp.message_handler(lambda message: message.text in ["Голосование", "Обращение"])
+@dp.message_handler(lambda message: message.text in ["Голосование", "Обращение", "Выход"])
 async def choice_main_option(message: types.Message):
+    if message.text == "Выход":
+        await exit_user(message)
+        return
     if not await UserRep.get_user_by_id(message.from_user.id):
         await message.answer("Пожалуйста, авторизуйтесь.")
         return
@@ -44,6 +47,11 @@ async def show_request_options(message: types.Message):
     keyboard.add(*buttons)
 
     await message.answer("Выберите тип обращения:", reply_markup=keyboard)
+
+
+async def exit_user(message: types.Message):
+    await UserRep.remove_telegram_id(message.from_user.id)
+    await message.answer("Вы вышли из аккаунта.\nДля входа или регистрации нажмите на /start")
 
 
 @dp.message_handler(lambda message: message.text in ["Cрочные", "Не срочные", "Срочно", "Не срочно", "Мои обращения"])

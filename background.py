@@ -13,7 +13,7 @@ def home():
 
 
 def run():
-    app.run(host='0.0.0.0', port=82)
+    app.run(host='0.0.0.0', port=83)
 
 
 def keep_alive():

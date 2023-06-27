@@ -20,7 +20,8 @@ async def create_db():
         cursor = await db.cursor()
         await cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
-                telegram_id INTEGER PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                telegram_id INTEGER,
                 username TEXT NOT NULL,
                 password TEXT NOT NULL,
                 last_name TEXT NOT NULL,

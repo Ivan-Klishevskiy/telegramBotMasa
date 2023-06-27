@@ -73,3 +73,11 @@ class UserRep:
             await cursor.execute("SELECT last_name, apartment_number FROM users WHERE username = ?", (username,))
             user_info = await cursor.fetchone()
             return user_info
+
+    @staticmethod
+    async def remove_telegram_id(telegram_id: int):
+        async with connect('data/users.db') as db:
+            cursor = await db.cursor()
+            await cursor.execute("UPDATE users SET telegram_id = NULL WHERE telegram_id = ?", (telegram_id,))
+            await db.commit()
+
